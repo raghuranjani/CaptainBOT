@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Amazon Lex for JavaScript - Sample Application (BookTrip)</title>
+	<script src="https://sdk.amazonaws.com/js/aws-sdk-2.41.0.min.js"></script>
+	<style language="text/css">
+		input#wisdom {
+			padding: 4px;
+			font-size: 1em;
+			width: 400px
+		}
+		input::placeholder {
+			color: #ccc;
+			font-style: italic;
+		}
+		p.userRequest {
+			margin: 4px;
+			padding: 4px 10px 4px 10px;
+			border-radius: 4px;
+			min-width: 50%;
+			max-width: 85%;
+			float: left;
+			background-color: #7d7;
+		}
+		p.lexResponse {
+			margin: 4px;
+			padding: 4px 10px 4px 10px;
+			border-radius: 4px;
+			text-align: right;
+			min-width: 50%;
+			max-width: 85%;
+			float: right;
+			background-color: #bbf;
+			font-style: italic;
+		}
+		p.lexError {
+			margin: 4px;
+			padding: 4px 10px 4px 10px;
+			border-radius: 4px;
+			text-align: right;
+			min-width: 50%;
+			max-width: 85%;
+			float: right;
+			background-color: #f77;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="conversation" style="width: 400px; height: 400px; border: 1px solid #ccc; background-color: #eee; padding: 4px; overflow: scroll"></div>
+	<form id="chatform" style="margin-top: 10px" onsubmit="return pushChat();">
+		<input type="text" id="wisdom" size="80" value="" placeholder="I need a hotel room">
+	</form>
+	<script type="text/javascript">
+		// set the focus to the input box
+		document.getElementById("wisdom").focus();
+		// Initialize the Amazon Cognito credentials provider
+		AWS.config.region = 'us-east-1'; // Region
+		AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+		// Provide your Pool Id here
+			IdentityPoolId: 'us-east-1:1f51e116-b589-4a87-8f3a-0cee4104b8ca',
+		});
+		var lexruntime = new AWS.LexRuntime();
+		var lexUserId = 'chatbot-demo' + Date.now();
+		var sessionAttributes = {};
+		function pushChat() {
+			// if there is text to be sent...
+			var wisdomText = document.getElementById('wisdom');
+			if (wisdomText && wisdomText.value && wisdomText.value.trim().length > 0) {
+				// disable input to show we're sending it
+				var wisdom = wisdomText.value.trim();
+				wisdomText.value = '...';
+				wisdomText.locked = true;
+				// send it to the Lex runtime
+				var params = {
+					botAlias: '$LATEST',
+					botName: 'VanguardBot',
+					inputText: wisdom,
+					userId: lexUserId,
+					sessionAttributes: sessionAttributes
+				};
+				showRequest(wisdom);
+				lexruntime.postText(params, function(err, data) {
+					if (err) {
+						console.log(err, err.stack);
+						showError('Error:  ' + err.message + ' (see console for details)')
+					}
+					if (data) {
+						// capture the sessionAttributes for the next cycle
+						sessionAttributes = data.sessionAttributes;
+						// show response and/or error/dialog status
+						showResponse(data);
+					}
+					// re-enable input
+					wisdomText.value = '';
+					wisdomText.locked = false;
+				});
+			}
+			// we always cancel form submission
+			return false;
+		}
+		function showRequest(daText) {
+			var conversationDiv = document.getElementById('conversation');
+			var requestPara = document.createElement("P");
+			requestPara.className = 'userRequest';
+			requestPara.appendChild(document.createTextNode(daText));
+			conversationDiv.appendChild(requestPara);
+			conversationDiv.scrollTop = conversationDiv.scrollHeight;
+		}
+		function showError(daText) {
+			var conversationDiv = document.getElementById('conversation');
+			var errorPara = document.createElement("P");
+			errorPara.className = 'lexError';
+			errorPara.appendChild(document.createTextNode(daText));
+			conversationDiv.appendChild(errorPara);
+			conversationDiv.scrollTop = conversationDiv.scrollHeight;
+		}
+		function showResponse(lexResponse) {
+			var conversationDiv = document.getElementById('conversation');
+			var responsePara = document.createElement("P");
+			responsePara.className = 'lexResponse';
+			if (lexResponse.message) {
+				responsePara.appendChild(document.createTextNode(lexResponse.message));
+				responsePara.appendChild(document.createElement('br'));
+			}
+			// I want to get client id for Acay Daghan
+			var firstName = lexResponse.slots.first_name;
+			var lastName = lexResponse.slots.last_name;
+			var url = 'http://crewnet.vanguard.com/CrewNetPortal/PageComponent?componentId=SearchPageComponents:SearchAll&headerSearchFilter=all&qt='+lastName+','+firstName;
+			httpGet(url, responsePara, conversationDiv);
+			if (lexResponse.dialogState === 'ReadyForFulfillment') {
+				//responsePara.appendChild(document.createTextNode(
+				//	'Ready for fulfillment'));
+				// TODO:  show slot values
+			} else {
+				//responsePara.appendChild(document.createTextNode(
+				//	'(' + lexResponse.dialogState + ')'));
+			}
+			//conversationDiv.appendChild(responsePara);
+			//conversationDiv.scrollTop = conversationDiv.scrollHeight;
+		}
+		function httpGet(theUrl, responsePara, conversationDiv)
+		{
+			var req = new XMLHttpRequest();
+			req.onreadystatechange = function() {
+				if (req.readyState === 4) {
+					var response = req.responseText;
+					//var json = JSON.parse(response);
+					if(response.indexOf("No results were found for ")>=0){
+						responsePara.appendChild(document.createTextNode("Sorry, no result found, typo in name?"));
+						conversationDiv.appendChild(responsePara);
+						conversationDiv.scrollTop = conversationDiv.scrollHeight;
+					}else{
+						var idIndex = response.indexOf('?id=');
+						var idStr = response.substr(idIndex+4, 6);
+						httpGetProfile('http://crewnet.vanguard.com/CrewNetPortal/CrewSearch?id='+idStr, responsePara, conversationDiv);
+					}
+					//responsePara.appendChild(document.createTextNode(response.substr(uidIndex+5, 6)));
+					//conversationDiv.appendChild(responsePara);
+					//
+					//conversationDiv.scrollTop = conversationDiv.scrollHeight;
+				}
+			};
+
+			req.open('GET', theUrl);
+			req.send(null);    
+		}
+		function httpGetProfile(theUrl, responsePara, conversationDiv)
+		{
+			var req = new XMLHttpRequest();
+			req.onreadystatechange = function() {
+				if (req.readyState === 4) {
+					var response = req.responseText;
+					//var json = JSON.parse(response);
+					var idIndex = response.indexOf('<span id="crew-profile-crew-id">');
+					var idStr = response.substr(idIndex+32, 6);
+					var uidIndex = response.indexOf('<span id="crew-profile-user-id">');
+					var uidStr = response.substr(uidIndex+32, 4);
+					var extendIndex = response.indexOf('<span id="crew-info-ext-id">');
+					var extendStr = response.substr(extendIndex, 50);
+					var extend = "";
+					if(extendStr.indexOf("&#8212;")>=0){
+						extend = "--";
+					}else{
+						var extendArr1 = extendStr.split('id">');
+						console.log(extendArr1);
+						var extendArr2 = extendArr1[1].trim().split('</span>');
+						console.log(extendArr2);
+						extend = extendArr2[0].trim().substr(1);
+					}
+					var returnContent = "Uid: " + uidStr + ", id: " + idStr + ", extension: "+ extend;
+					responsePara.appendChild(document.createTextNode(returnContent));
+					conversationDiv.appendChild(responsePara);
+					conversationDiv.scrollTop = conversationDiv.scrollHeight;
+				}
+			};
+
+			req.open('GET', theUrl);
+			req.send(null);    
+		}
+		function getHTML( url, callback ) {
+
+			// Feature detection
+			if ( !window.XMLHttpRequest ) return;
+
+			// Create new request
+			var xhr = new XMLHttpRequest();
+
+			// Setup callback
+			xhr.onload = function() {
+				if ( callback && typeof( callback ) === 'function' ) {
+					callback( this.responseXML );
+				}
+			}
+
+			// Get the HTML
+			xhr.open( 'GET', url );
+			xhr.responseType = 'document';
+			xhr.send();
+
+		}
+	</script>
+</body>
+
+</html>
