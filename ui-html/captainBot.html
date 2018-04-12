@@ -50,7 +50,7 @@
 <body>
 	<div id="conversation" style="width: 400px; height: 400px; border: 1px solid #ccc; background-color: #eee; padding: 4px; overflow: scroll"></div>
 	<form id="chatform" style="margin-top: 10px" onsubmit="return pushChat();">
-		<input type="text" id="wisdom" size="80" value="" placeholder="I need a hotel room">
+		<input type="text" id="wisdom" size="80" value="" placeholder="">
 	</form>
 	<script type="text/javascript">
 		// set the focus to the input box
@@ -116,30 +116,50 @@
 			conversationDiv.appendChild(errorPara);
 			conversationDiv.scrollTop = conversationDiv.scrollHeight;
 		}
+		
 		function showResponse(lexResponse) {
+
 			var conversationDiv = document.getElementById('conversation');
 			var responsePara = document.createElement("P");
 			responsePara.className = 'lexResponse';
-			if (lexResponse.message) {
-				responsePara.appendChild(document.createTextNode(lexResponse.message));
-				responsePara.appendChild(document.createElement('br'));
+			//intentName : ClientIdIntent JiraIntend
+			if(lexResponse.intentName == 'ClientIdIntent'){
+				if (lexResponse.message) {
+					responsePara.appendChild(document.createTextNode(lexResponse.message));
+					responsePara.appendChild(document.createElement('br'));
+				}
+				
+				if (lexResponse.dialogState === 'ReadyForFulfillment') {
+					//responsePara.appendChild(document.createTextNode(
+					//	'Ready for fulfillment'));
+					// TODO:  show slot values
+					// I want to get client id for Acay Daghan
+					var firstName = lexResponse.slots.first_name;
+					var lastName = lexResponse.slots.last_name;
+					var url = 'http://crewnet.vanguard.com/CrewNetPortal/PageComponent?componentId=SearchPageComponents:SearchAll&headerSearchFilter=all&qt='+lastName+','+firstName;
+					httpGet(url, responsePara, conversationDiv);
+				} else {
+					conversationDiv.appendChild(responsePara);
+					conversationDiv.scrollTop = conversationDiv.scrollHeight;
+					//responsePara.appendChild(document.createTextNode(
+					//	'(' + lexResponse.dialogState + ')'));
+				}
+			}else if(lexResponse.intentName == 'JiraIntend'){
+				var sum = '';
+				lexResponse.responseCard.genericAttachments.forEach(function(element) { 
+					element.buttons.forEach(function(element2) {
+							sum += element2.value + ',';
+						});
+				});
+				console.log(sum);
+				responsePara.appendChild(document.createTextNode(lexResponse.message+ " please select one of " + sum));
+				conversationDiv.appendChild(responsePara);
+				conversationDiv.scrollTop = conversationDiv.scrollHeight;
 			}
-			// I want to get client id for Acay Daghan
-			var firstName = lexResponse.slots.first_name;
-			var lastName = lexResponse.slots.last_name;
-			var url = 'http://crewnet.vanguard.com/CrewNetPortal/PageComponent?componentId=SearchPageComponents:SearchAll&headerSearchFilter=all&qt='+lastName+','+firstName;
-			httpGet(url, responsePara, conversationDiv);
-			if (lexResponse.dialogState === 'ReadyForFulfillment') {
-				//responsePara.appendChild(document.createTextNode(
-				//	'Ready for fulfillment'));
-				// TODO:  show slot values
-			} else {
-				//responsePara.appendChild(document.createTextNode(
-				//	'(' + lexResponse.dialogState + ')'));
-			}
-			//conversationDiv.appendChild(responsePara);
-			//conversationDiv.scrollTop = conversationDiv.scrollHeight;
+			
 		}
+		
+		
 		function httpGet(theUrl, responsePara, conversationDiv)
 		{
 			var req = new XMLHttpRequest();
