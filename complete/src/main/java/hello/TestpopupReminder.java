@@ -7,42 +7,20 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.WindowConstants;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+public class TestpopupReminder {
+	public static JDialog frame = null;
+	public static void main(String[] args) {
 
-@RestController
-public class GreetingController {
-
-    private static final String template = "Hello, %s!";
-    private static final String templateReminder = "Thanks, %s!";
-    public static JDialog frame = null;
-    private final AtomicLong counter = new AtomicLong();
-
-    @RequestMapping("/greeting")
-    public Greeting greeting(@RequestParam(value="name", defaultValue="World") String name) {
-        return new Greeting(counter.incrementAndGet(),
-                            String.format(template, name));
-    }
-    
-    @RequestMapping("/reminder")
-    public Greeting reminder(@RequestParam(value="reminder", defaultValue="schedule") String name) {
-    	testPopUp();
-        return new Greeting(13,
-                String.format(templateReminder, name));
-    }
-    
-    public void testPopUp(){
-    	String message = "Notification message to drink water"; 
+		String message = "Notification message to drink water"; 
 		String header = "<HTML><B>Its time to Drink water</B></HTML>"; 
 		
 		
@@ -161,5 +139,7 @@ public class GreetingController {
 		           }
 		      };
 		}.start();*/
-    }
+
+
+	}
 }
