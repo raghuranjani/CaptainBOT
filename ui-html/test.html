@@ -141,7 +141,18 @@
 			var conversationDiv = document.getElementById('conversation');
 			var responsePara = document.createElement("P");
 			responsePara.className = 'lexResponse';
-			if (lexResponse.message) {
+			console.log(lexResponse);
+			if (lexResponse.responseCard){
+				var sum = '';
+				lexResponse.responseCard.genericAttachments.forEach(function(element) { 
+					element.buttons.forEach(function(element2) {
+							sum += element2.value + ',';
+						});
+				});
+				console.log(sum);
+				responsePara.appendChild(document.createTextNode(lexResponse.message+ " please select one of " + sum));
+			}
+			else if (lexResponse.message) {
 				responsePara.appendChild(document.createTextNode(lexResponse.message));
 				responsePara.appendChild(document.createElement('br'));
 			}
@@ -149,10 +160,7 @@
 				responsePara.appendChild(document.createTextNode(
 					'Ready for fulfillment'));
 				// TODO:  show slot values
-			} else {
-				responsePara.appendChild(document.createTextNode(
-					'(' + lexResponse.dialogState + ')'));
-			}
+			} 
 			conversationDiv.appendChild(responsePara);
 			conversationDiv.scrollTop = conversationDiv.scrollHeight;
 		}
