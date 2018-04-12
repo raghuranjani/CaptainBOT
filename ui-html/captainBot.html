@@ -146,11 +146,14 @@
 				}
 			}else if(lexResponse.intentName == 'JiraIntend'){
 				var sum = '';
-				lexResponse.responseCard.genericAttachments.forEach(function(element) { 
-					element.buttons.forEach(function(element2) {
-							sum += element2.value + ',';
-						});
-				});
+				if(lexResponse.responseCard){
+					lexResponse.responseCard.genericAttachments.forEach(function(element) { 
+						element.buttons.forEach(function(element2) {
+								sum += element2.value + ',';
+							});
+					});
+				}
+				
 				console.log(sum);
 				responsePara.appendChild(document.createTextNode(lexResponse.message+ " please select one of " + sum));
 				conversationDiv.appendChild(responsePara);
